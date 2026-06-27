@@ -27,7 +27,9 @@ function ensureFileIsPassed ({ file }: Request, res: Response, next: NextFunctio
 async function extractZipBuffer (buffer: Buffer) {
   const directory = await unzipper.Open.buffer(buffer)
   for (const entry of directory.files) {
-    const fileName = entry.path
+    //const fileName = entry.path
+    // Remove caminhos relativos como ../
+    const fileName = path.basename(entry.path);
     const absolutePath = path.resolve('uploads/complaints/' + fileName)
     challengeUtils.solveIf(challenges.fileWriteChallenge, () => { return absolutePath === path.resolve('ftp/legal.md') })
     if (absolutePath.includes(path.resolve('.'))) {
