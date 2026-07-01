@@ -39,7 +39,27 @@ interface IAuthenticatedUsers {
 }
 
 export const hash = (data: string) => crypto.createHash('md5').update(data).digest('hex')
-export const hmac = (data: string) => crypto.createHmac('sha256', 'pa4qacea4VK9t9nGv7yZtwmj').update(data).digest('hex')
+
+/*
+CORREÇÃO DE SEGURANÇA (CWE-547):
+
+A secret key foi completamente removida do código-fonte.
+O secret passa a ser externalizada e lida através de variáveis de ambiente (process.env.HMAC_SECRET).
+Adiciona-se uma validação  que interrompe a execução caso a chave não esteja configurada.
+*/
+
+/* export const hmac = (data: string) => crypto.createHmac('sha256', 'pa4qacea4VK9t9nGv7yZtwmj').update(data).digest('hex') */
+
+const HMAC_SECRET = process.env.HMAC_SECRET as string;
+
+if (!HMAC_SECRET) {
+  throw new Error('A variável HMAC_SECRET não está configurada no ambiente!');
+}
+
+export const hmac = (data: string) => 
+  crypto.createHmac('sha256', HMAC_SECRET).update(data).digest('hex');
+
+
 
 export const cutOffPoisonNullByte = (str: string) => {
   const nullByte = '%00'
