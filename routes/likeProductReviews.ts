@@ -13,9 +13,26 @@ import * as db from '../data/mongodb'
 
 const sleep = async (ms: number) => await new Promise(resolve => setTimeout(resolve, ms))
 
+/*
+  CORREÇÃO DE SEGURANÇA (CWE-943): NoSQL Injection
+
+  1. Problema: O código original ('req.body.id') aceitava objetos do utilizador.
+  2. Risco: Um atacante (via Burp Suite) podia injetar operadores como '{"$ne": "11111111"}'.
+     O MongoDB avalia as duas partes (chave e valor) como uma instrução lógica em vez de um ID.
+  3. Solução: Aplicado o método 'String()' para forçar o dado a ser uma cadeia de caracteres pura.
+  4. Resultado: Destrói a estrutura do objeto, convertendo-o no texto inofensivo "[object Object]".
+     A consulta falha de forma segura (404) porque o MongoDB deixa de conseguir ler as duas partes.
+  
+  Nota:
+  Esta alteração mitiga a vulnerabilidade. Numa aplicação de produção, a abordagem
+  recomendada passa também pela validação do tipo, formato e conteúdo
+  dos dados recebidos antes de qualquer acesso à base de dados.
+*/
+
 export function likeProductReviews () {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const id = req.body.id
+    //const id = req.body.id
+    const id = String(req.body.id);
     const user = security.authenticatedUsers.from(req)
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' })
