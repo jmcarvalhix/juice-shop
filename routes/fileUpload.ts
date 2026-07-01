@@ -24,10 +24,26 @@ function ensureFileIsPassed ({ file }: Request, res: Response, next: NextFunctio
   }
 }
 
+/*
+  CORREÇÃO DE SEGURANÇA (CWE-23): Path Traversal
+
+1. Problema: O código original ('entry.path') aceitava caminhos de ficheiros sem validação.
+2. Risco: Um atacante (via Burp Suite) podia alterar o nome do ficheiro para injetar sequências como '../../etc/passwd'. O sistema unia os textos lógicos e escrevia fora da pasta planeada.
+3. Solução: Aplicado o método 'path.basename()' para extrair estritamente o nome final do ficheiro.
+4. Resultado: Remove qualquer caminho absoluto ou relativo, convertendo-o apenas no nome do ficheiro (ex: 'ficheiro.txt').
+A escrita dos ficheiros permanece segura e confinada dentro do diretório de destino ('uploads/complaints/').
+
+Resultado:
+A escrita permanece confinada ao diretório 'uploads/complaints/', mas a segurança depende
+de validações adicionais além da normalização do nome do ficheiro - nomes únicos (UUID) - validação de extensão e tipo de ficheiro
+
+*/
+
 async function extractZipBuffer (buffer: Buffer) {
   const directory = await unzipper.Open.buffer(buffer)
   for (const entry of directory.files) {
-    const fileName = entry.path
+    //const fileName = entry.path
+    const fileName = path.basename(entry.path);
     const absolutePath = path.resolve('uploads/complaints/' + fileName)
     challengeUtils.solveIf(challenges.fileWriteChallenge, () => { return absolutePath === path.resolve('ftp/legal.md') })
     if (absolutePath.includes(path.resolve('.'))) {
