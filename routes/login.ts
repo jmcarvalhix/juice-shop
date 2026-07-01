@@ -29,9 +29,27 @@ export function login () {
       })
   }
 
+/*  
+CORREÇÃO DE SEGURANÇA (SQL Injection - CWE-89)  
+A query SQL foi corrigida para remover concatenação direta de input do utilizador, substituindo por parâmetros nomeados (replacements).  
+Isto impede SQL Inject através dos campos 'email' e 'password', garantindo que os valores são tratados como dados e não como código SQL.  
+*/
+
   return (req: Request, res: Response, next: NextFunction) => {
     verifyPreLoginChallenges(req) // vuln-code-snippet hide-line
-    models.sequelize.query(`SELECT * FROM Users WHERE email = '${req.body.email || ''}' AND password = '${security.hash(req.body.password || '')}' AND deletedAt IS NULL`, { model: UserModel, plain: true }) // vuln-code-snippet vuln-line loginAdminChallenge loginBenderChallenge loginJimChallenge
+    // models.sequelize.query(`SELECT * FROM Users WHERE email = '${req.body.email || ''}' AND password = '${security.hash(req.body.password || '')}' AND deletedAt IS NULL`, { model: UserModel, plain: true }) // vuln-code-snippet vuln-line loginAdminChallenge loginBenderChallenge loginJimChallenge
+    // ADD CR
+      models.sequelize.query(
+  'SELECT * FROM Users WHERE email = :email AND password = :password AND deletedAt IS NULL',
+  {
+    model: UserModel,
+    plain: true,
+    replacements: {
+      email: req.body.email || '',
+      password: security.hash(req.body.password || '')
+    }
+  }
+)
       .then((authenticatedUser) => { // vuln-code-snippet neutral-line loginAdminChallenge loginBenderChallenge loginJimChallenge
         const user = utils.queryResultToJson(authenticatedUser)
         if (user.data?.id && user.data.totpSecret !== '') {
